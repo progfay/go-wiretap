@@ -1,9 +1,9 @@
 package wiretap
 
 import (
-	"fmt"
-	"reflect"
 	"sync/atomic"
+
+	"github.com/progfay/go-wrap/wrap"
 )
 
 type Report struct {
@@ -20,33 +20,13 @@ func (r *Report) GetCount() int64 {
 }
 
 func Wiretap(dst, src interface{}) (*Report, error) {
-	vDst := reflect.ValueOf(dst)
-	vSrc := reflect.ValueOf(src)
-
-	if vDst.Kind() != reflect.Ptr {
-		return nil, fmt.Errorf("First argument of WiretapWithArgs must be pointer of function")
-	}
-
-	vDst = vDst.Elem()
-	if vDst.Kind() != reflect.Func {
-		return nil, fmt.Errorf("First argument of WiretapWithArgs must be pointer of function")
-	}
-
-	if vSrc.Kind() != reflect.Func {
-		return nil, fmt.Errorf("Second argument of WiretapWithArgs must be function")
-	}
-
-	if vDst.Type() != vSrc.Type() {
-		return nil, fmt.Errorf("Value of first argument must be same type function as second argument")
-	}
-
 	r := Report{callCount: 0}
-	f := func(values []reflect.Value) []reflect.Value {
+	err := wrap.Before(dst, src, func() {
 		r.IncCount()
-		return vSrc.Call(values)
+	})
+	if err != nil {
+		return nil, err
 	}
-
-	vDst.Set(reflect.MakeFunc(vDst.Type(), f))
 
 	return &r, nil
 }
